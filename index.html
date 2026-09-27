@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jurnal Keuangan F&B</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#1c2230; --sub:#5b6472; --line:#e3e6ec;
+  --brand:#2c5f4f; --brand-ink:#ffffff; --accent:#c98a3a;
+  --bad:#c0392b; --good:#1f7a4d;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#14171c; --card:#1c2129; --ink:#eef0f3; --sub:#9aa3b0; --line:#2b313c; --brand:#4c8a74; --accent:#d9a15c; }
+}
+:root[data-theme="dark"]{ --bg:#14171c; --card:#1c2129; --ink:#eef0f3; --sub:#9aa3b0; --line:#2b313c; --brand:#4c8a74; --accent:#d9a15c; }
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{background:var(--brand);color:var(--brand-ink);padding:16px 20px;position:sticky;top:0;z-index:5;padding-top:calc(16px + env(safe-area-inset-top,0px))}
+header h1{margin:0;font-size:1.1rem;font-weight:700}
+header p{margin:2px 0 0;font-size:.78rem;opacity:.85}
+nav{display:flex;gap:6px;flex-wrap:nowrap;padding:9px 14px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:calc(54px + env(safe-area-inset-top,0px));z-index:4;overflow-x:auto}
+nav button{border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:8px;font-size:.78rem;cursor:pointer;white-space:nowrap;flex:none}
+nav button.active{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+main{max-width:1000px;margin:0 auto;padding:16px 12px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:14px}
+h2{margin:0 0 12px;font-size:1rem}
+h3{margin:14px 0 8px;font-size:.88rem;color:var(--sub)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.row>*{flex:1;min-width:130px}
+label{font-size:.72rem;color:var(--sub);display:block;margin-bottom:3px}
+input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-size:.85rem}
+input:disabled{opacity:.6}
+button.btn{background:var(--brand);color:var(--brand-ink);border:none;padding:8px 15px;border-radius:8px;font-size:.83rem;cursor:pointer;font-weight:600}
+button.btn.secondary{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+button.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--bad);padding:4px 9px;font-size:.72rem}
+button.btn.small{padding:4px 9px;font-size:.72rem}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line)}
+th{color:var(--sub);font-weight:600;font-size:.7rem;text-transform:uppercase}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;background:var(--bg);border:1px solid var(--line);color:var(--sub)}
+.linesbox,.detailbox{border:1px solid var(--line);border-radius:8px;padding:9px;margin-bottom:10px}
+.lineitem{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:7px;margin-bottom:6px;align-items:end}
+.detailitem{display:grid;grid-template-columns:2fr 1fr auto;gap:7px;margin-bottom:6px;align-items:end}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin-bottom:14px}
+.kpi .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px}
+.kpi .box .v{font-size:1.15rem;font-weight:700}
+.kpi .box .l{font-size:.7rem;color:var(--sub)}
+.msg{font-size:.78rem;padding:7px 9px;border-radius:7px;margin-bottom:8px}
+.msg.err{background:rgba(192,57,43,.12);color:var(--bad)}
+.msg.ok{background:rgba(31,122,77,.12);color:var(--good)}
+.section-total{font-weight:700;border-top:2px solid var(--line)}
+small.hint{color:var(--sub);font-size:.72rem}
+.inlineform{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📒 Jurnal Keuangan F&amp;B</h1>
+  <p>Kas harian, HPP menu, hutang, multi-outlet &amp; laporan keuangan otomatis</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<script>
+const LS_KEY = "jk_fnb_v2";
+let data = load();
+function uid(p){ return p+Date.now()+Math.random().toString(36).slice(2,6); }
+
+function load(){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return {
+    outlets:[{id:"o1",name:"Outlet Utama"}],
+    accounts:[
+      {id:"1000",code:"1000",name:"Kas Tunai",type:"Aset",isKas:true,kasType:"Tunai",outletId:"o1"},
+      {id:"1010",code:"1010",name:"Kas Kasir",type:"Aset",isKas:true,kasType:"Kasir",outletId:"o1"},
+      {id:"1050",code:"1050",name:"Kas Pusat",type:"Aset",isKas:true,kasType:"Pusat",outletId:null},
+      {id:"1100",code:"1100",name:"Bank",type:"Aset",isKas:true,kasType:"Bank",outletId:null},
+      {id:"1300",code:"1300",name:"Persediaan Bahan Baku",type:"Aset"},
+      {id:"1500",code:"1500",name:"Peralatan & Perlengkapan Dapur",type:"Aset"},
+      {id:"2000",code:"2000",name:"Utang Usaha (Supplier)",type:"Liabilitas"},
+      {id:"3000",code:"3000",name:"Modal Pemilik",type:"Ekuitas"},
+      {id:"3900",code:"3900",name:"Prive / Setoran Pribadi",type:"Ekuitas"},
+      {id:"4000",code:"4000",name:"Penjualan Makanan",type:"Pendapatan"},
+      {id:"4100",code:"4100",name:"Penjualan Minuman",type:"Pendapatan"},
+      {id:"4200",code:"4200",name:"Pendapatan Lain-lain",type:"Pendapatan"},
+      {id:"5000",code:"5000",name:"Beban Bahan Baku (HPP)",type:"Beban"},
+      {id:"5100",code:"5100",name:"Beban Gaji Karyawan",type:"Beban"},
+      {id:"5200",code:"5200",name:"Beban Sewa Tempat",type:"Beban"},
+      {id:"5300",code:"5300",name:"Beban Listrik & Air",type:"Beban"},
+      {id:"5400",code:"5400",name:"Beban Perlengkapan & Operasional",type:"Beban"},
+      {id:"5500",code:"5500",name:"Beban Lain-lain",type:"Beban"}
+    ],
+    menus:[
+      {id:"m1",name:"Nasi Goreng Spesial",hargaJual:20000,hpp:8000},
+      {id:"m2",name:"Es Teh Manis",hargaJual:5000,hpp:1500}
+    ],
+    entries:[],
+    hutangs:[]
+  };
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){} }
+const TYPES = ["Aset","Liabilitas","Ekuitas","Pendapatan","Beban"];
+const DEBIT_NORMAL = t => t==="Aset"||t==="Beban";
+const fmt = n => (Math.round((n||0)*100)/100).toLocaleString("id-ID",{minimumFractionDigits:0});
+const acc = id => data.accounts.find(a=>a.id===id);
+const outletName = id => (data.outlets.find(o=>o.id===id)||{}).name || "-";
+const rekeningList = () => data.accounts.filter(a=>a.isKas);
+const JENIS_TRANSAKSI = ["Penjualan","Pembelian Bahan Baku","Operasional","Gaji","Pelunasan Hutang","Modal/Investasi","Transfer Saldo","Lain-lain"];
+const MASUK_CATS = [
+  {id:"4000",label:"Penjualan Makanan",jenis:"Penjualan"},
+  {id:"4100",label:"Penjualan Minuman",jenis:"Penjualan"},
+  {id:"4200",label:"Pendapatan Lain-lain",jenis:"Lain-lain"},
+  {id:"3000",label:"Modal / Suntikan Dana",jenis:"Modal/Investasi"}
+];
+const KELUAR_CATS = [
+  {id:"5000",label:"Belanja Bahan Baku",jenis:"Pembelian Bahan Baku"},
+  {id:"5100",label:"Gaji / Upah Karyawan",jenis:"Gaji"},
+  {id:"5200",label:"Sewa Tempat",jenis:"Operasional"},
+  {id:"5300",label:"Listrik & Air",jenis:"Operasional"},
+  {id:"5400",label:"Perlengkapan & Operasional",jenis:"Operasional"},
+  {id:"5500",label:"Beban Lain-lain",jenis:"Lain-lain"},
+  {id:"3900",label:"Prive / Ambil Pribadi",jenis:"Lain-lain"}
+];
+
+function addEntry(e){ e.id = uid("e"); data.entries.push(e); return e; }
+function accountBalances(){
+  const map = {}; data.accounts.forEach(a=> map[a.id]={debit:0,credit:0});
+  data.entries.forEach(e=> e.lines.forEach(l=>{
+    if(!map[l.accountId]) map[l.accountId]={debit:0,credit:0};
+    map[l.accountId].debit += (l.debit||0); map[l.accountId].credit += (l.credit||0);
+  }));
+  return map;
+}
+function netByType(type){
+  const bal = accountBalances(); let sum=0;
+  data.accounts.filter(a=>a.type===type).forEach(a=>{
+    const b = bal[a.id]||{debit:0,credit:0};
+    sum += DEBIT_NORMAL(type) ? (b.debit-b.credit) : (b.credit-b.debit);
+  });
+  return sum;
+}
+
+let currentTab = "kasharian";
+const TABS = [
+  ["kasharian","Kas Harian"],["rekap","Rekap"],["hutang","Hutang"],["transfer","Transfer Saldo"],
+  ["rekening","Rekening & Outlet"],["menu","Menu & HPP"],["dashboard","Ringkasan"],
+  ["accounts","Akun (COA)"],["journal","Jurnal Umum"],["ledger","Buku Besar"],
+  ["trial","Neraca Saldo"],["income","Laba Rugi"],["balance","Neraca"]
+];
+function renderNav(){
+  const nav = document.getElementById("nav"); nav.innerHTML = "";
+  TABS.forEach(([key,label])=>{
+    const b = document.createElement("button");
+    b.textContent = label; b.className = key===currentTab ? "active":"";
+    b.onclick = ()=>{ currentTab=key; render(); };
+    nav.appendChild(b);
+  });
+}
+function render(){
+  renderNav();
+  const main = document.getElementById("main"); main.innerHTML = "";
+  ({kasharian:renderKasHarian, rekap:renderRekap, hutang:renderHutang, transfer:renderTransfer,
+    rekening:renderRekening, menu:renderMenu, dashboard:renderDashboard, accounts:renderAccounts,
+    journal:renderJournal, ledger:renderLedger, trial:renderTrial, income:renderIncome, balance:renderBalance
+  })[currentTab](main);
+}
+
+/* ===== KAS HARIAN ===== */
+let kh_jenisArus="masuk", kh_outlet=null, kh_rekening=null, kh_cat=null, kh_jenisT=null, kh_useMenu=false, kh_menu=null, kh_qty=1;
+let draftDetails = [];
+function renderKasHarian(main){
+  if(!kh_outlet) kh_outlet = data.outlets[0] ? data.outlets[0].id : null;
+  if(!kh_rekening) kh_rekening = rekeningList()[0] ? rekeningList()[0].id : null;
+  const cats = kh_jenisArus==="masuk" ? MASUK_CATS : KELUAR_CATS;
+  if(!kh_cat || !cats.some(c=>c.id===kh_cat)) kh_cat = cats[0].id;
+  if(!kh_jenisT) kh_jenisT = (cats.find(c=>c.id===kh_cat)||{}).jenis || "Lain-lain";
+
+  const kpi = document.createElement("div"); kpi.className="kpi";
+  const totalMasuk = data.entries.filter(e=>e.arus==="masuk").reduce((s,e)=>s+e.jumlah,0);
+  const totalKeluar = data.entries.filter(e=>e.arus==="keluar").reduce((s,e)=>s+e.jumlah,0);
+  const totalKasSemua = rekeningList().reduce((s,r)=>{const b=accountBalances()[r.id]||{debit:0,credit:0};return s+(b.debit-b.credit);},0);
+  kpi.innerHTML = `
+    <div class="box"><div class="l">Total Saldo Semua Rekening</div><div class="v">Rp ${fmt(totalKasSemua)}</div></div>
+    <div class="box"><div class="l">Total Uang Masuk</div><div class="v" style="color:var(--good)">Rp ${fmt(totalMasuk)}</div></div>
+    <div class="box"><div class="l">Total Uang Keluar</div><div class="v" style="color:var(--bad)">Rp ${fmt(totalKeluar)}</div></div>`;
+  main.appendChild(kpi);
+
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Catat Uang Masuk / Keluar</h2>`;
+  const r1 = document.createElement("div"); r1.className="row";
+  r1.innerHTML = `
+    <div><label>Tanggal</label><input type="date" id="kh-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>Arus</label><select onchange="kh_jenisArus=this.value; kh_cat=null; render();">
+      <option value="masuk" ${kh_jenisArus==="masuk"?"selected":""}>💰 Uang Masuk</option>
+      <option value="keluar" ${kh_jenisArus==="keluar"?"selected":""}>📤 Uang Keluar</option>
+    </select></div>
+    <div><label>Outlet</label><select onchange="kh_outlet=this.value">${data.outlets.map(o=>`<option value="${o.id}" ${kh_outlet===o.id?"selected":""}>${o.name}</option>`).join("")}</select></div>
+    <div><label>Rekening</label><select onchange="kh_rekening=this.value">${rekeningList().map(r=>`<option value="${r.id}" ${kh_rekening===r.id?"selected":""}>${r.name} (${r.kasType})</option>`).join("")}</select></div>`;
+  card.appendChild(r1);
+  const r2 = document.createElement("div"); r2.className="row";
+  r2.innerHTML = `
+    <div><label>Kategori</label><select onchange="kh_cat=this.value; const m=(${JSON.stringify(cats)}).find(c=>c.id===this.value); kh_jenisT=m?m.jenis:'Lain-lain'; render();">${cats.map(c=>`<option value="${c.id}" ${kh_cat===c.id?"selected":""}>${c.label}</option>`).join("")}</select></div>
+    <div><label>Jenis Transaksi</label><select onchange="kh_jenisT=this.value">${JENIS_TRANSAKSI.map(j=>`<option ${kh_jenisT===j?"selected":""}>${j}</option>`).join("")}</select></div>`;
+  card.appendChild(r2);
+
+  if(kh_jenisArus==="masuk"){
+    const mrow = document.createElement("div"); mrow.className="row";
+    mrow.innerHTML = `
+      <div><label><input type="checkbox" id="kh-usemenu" ${kh_useMenu?"checked":""} onchange="kh_useMenu=this.checked; render();" style="width:auto;display:inline-block"> Jual dari Menu (hitung HPP otomatis)</label></div>`;
+    card.appendChild(mrow);
+    if(kh_useMenu){
+      if(!kh_menu) kh_menu = data.menus[0] ? data.menus[0].id : null;
+      const mr = document.createElement("div"); mr.className="row";
+      mr.innerHTML = `
+        <div><label>Menu</label><select onchange="kh_menu=this.value; render();">${data.menus.map(m=>`<option value="${m.id}" ${kh_menu===m.id?"selected":""}>${m.name}</option>`).join("")}</select></div>
+        <div><label>Qty</label><input type="number" min="1" value="${kh_qty}" onchange="kh_qty=parseInt(this.value)||1; render();"></div>`;
+      card.appendChild(mr);
+      const menu = data.menus.find(m=>m.id===kh_menu);
+      if(menu){
+        const info = document.createElement("p");
+        info.innerHTML = `<small class="hint">Total penjualan: Rp ${fmt(menu.hargaJual*kh_qty)} • HPP otomatis dicatat: Rp ${fmt(menu.hpp*kh_qty)}</small>`;
+        card.appendChild(info);
+      }
+    }
+  }
+
+  const r3 = document.createElement("div"); r3.className="row";
+  r3.innerHTML = `
+    <div><label>Jumlah (Rp)${kh_jenisArus==="masuk"&&kh_useMenu?" — otomatis":""}</label><input type="number" min="0" id="kh-amount" ${kh_jenisArus==="masuk"&&kh_useMenu?"disabled":""} value="${kh_jenisArus==="masuk"&&kh_useMenu&&data.menus.find(m=>m.id===kh_menu)?data.menus.find(m=>m.id===kh_menu).hargaJual*kh_qty:""}" placeholder="0"></div>
+    <div style="flex:2"><label>Keterangan</label><input id="kh-desc" placeholder="cth. Penjualan hari ini / Belanja pasar"></div>`;
+  card.appendChild(r3);
+
+  if(kh_jenisArus==="keluar"){
+    const dbox = document.createElement("div"); dbox.className="detailbox";
+    dbox.innerHTML = `<h3 style="margin-top:0">Rincian Pengeluaran (opsional)</h3><div id="detail-lines"></div>`;
+    card.appendChild(dbox);
+    const addDetailBtn = document.createElement("button");
+    addDetailBtn.className="btn secondary small"; addDetailBtn.textContent="+ Tambah Rincian";
+    addDetailBtn.onclick = ()=>{ draftDetails.push({desc:"",jumlah:""}); renderDetailLines(); };
+    card.appendChild(addDetailBtn);
+  }
+
+  const msgDiv = document.createElement("div"); msgDiv.id="kh-msg"; msgDiv.style.margin="10px 0";
+  card.appendChild(msgDiv);
+  const saveBtn = document.createElement("button"); saveBtn.className="btn"; saveBtn.textContent="Simpan Transaksi";
+  saveBtn.style.marginTop="6px"; saveBtn.onclick = submitKasHarian;
+  card.appendChild(saveBtn);
+  main.appendChild(card);
+  if(kh_jenisArus==="keluar") renderDetailLines();
+
+  const listCard = document.createElement("div"); listCard.className="card";
+  listCard.innerHTML = `<h2>Transaksi Kas Terbaru</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  const rows = [...data.entries].filter(e=>e.arus).sort((a,b)=>a.date<b.date?1:-1).slice(0,15);
+  wrap.innerHTML = rows.length ? `<table><thead><tr><th>Tgl</th><th>Arus</th><th>Outlet</th><th>Rekening</th><th>Jenis</th><th>Keterangan</th><th class="num">Jumlah</th><th></th></tr></thead><tbody>
+    ${rows.map(e=>`<tr><td>${e.date}</td><td>${e.arus==="masuk"?'<span class="pill" style="color:var(--good)">Masuk</span>':'<span class="pill" style="color:var(--bad)">Keluar</span>'}</td>
+      <td>${outletName(e.outletId)}</td><td>${acc(e.rekeningId)?acc(e.rekeningId).name:'-'}</td><td>${e.jenisT||'-'}</td><td>${e.desc}</td>
+      <td class="num">Rp ${fmt(e.jumlah)}</td><td><button class="btn danger" onclick="deleteEntry('${e.id}')">Hapus</button></td></tr>`).join("")}
+  </tbody></table>` : `<p><small class="hint">Belum ada transaksi kas.</small></p>`;
+  listCard.appendChild(wrap);
+  main.appendChild(listCard);
+}
+function renderDetailLines(){
+  const box = document.getElementById("detail-lines"); if(!box) return;
+  box.innerHTML = "";
+  draftDetails.forEach((d,i)=>{
+    const div = document.createElement("div"); div.className="detailitem";
+    div.innerHTML = `
+      <div><input placeholder="Rincian (cth. Beli cabai)" value="${d.desc}" oninput="draftDetails[${i}].desc=this.value"></div>
+      <div><input type="number" min="0" placeholder="Jumlah" value="${d.jumlah}" oninput="draftDetails[${i}].jumlah=this.value; syncDetailTotal();"></div>
+      <div><button class="btn danger small" onclick="draftDetails.splice(${i},1); renderDetailLines(); syncDetailTotal();">✕</button></div>`;
+    box.appendChild(div);
+  });
+  syncDetailTotal();
+}
+function syncDetailTotal(){
+  const amt = document.getElementById("kh-amount"); if(!amt) return;
+  const total = draftDetails.reduce((s,d)=>s+(parseFloat(d.jumlah)||0),0);
+  if(draftDetails.length>0){ amt.value = total; amt.disabled = true; } else { amt.disabled = false; }
+}
+function submitKasHarian(){
+  const date = document.getElementById("kh-date").value;
+  const desc = document.getElementById("kh-desc").value.trim();
+  const msg = document.getElementById("kh-msg");
+  let amount = parseFloat(document.getElementById("kh-amount").value);
+  if(!date || !desc){ msg.innerHTML=`<div class="msg err">Tanggal dan keterangan wajib diisi.</div>`; return; }
+  if(!amount || amount<=0){ msg.innerHTML=`<div class="msg err">Jumlah harus lebih dari 0.</div>`; return; }
+  const lines = kh_jenisArus==="masuk"
+    ? [{accountId:kh_rekening,debit:amount,credit:0},{accountId:kh_cat,debit:0,credit:amount}]
+    : [{accountId:kh_cat,debit:amount,credit:0},{accountId:kh_rekening,debit:0,credit:amount}];
+  const entry = addEntry({date,desc,arus:kh_jenisArus,jenisT:kh_jenisT,outletId:kh_outlet,rekeningId:kh_rekening,jumlah:amount,lines,
+    details: kh_jenisArus==="keluar" ? draftDetails.filter(d=>d.desc&&d.jumlah).map(d=>({desc:d.desc,jumlah:parseFloat(d.jumlah)})) : undefined});
+  if(kh_jenisArus==="masuk" && kh_useMenu && kh_menu){
+    const menu = data.menus.find(m=>m.id===kh_menu);
+    if(menu){
+      const hppAmt = menu.hpp*kh_qty;
+      addEntry({date,desc:`HPP otomatis - ${menu.name} x${kh_qty}`,arus:null,jenisT:"Pembelian Bahan Baku",outletId:kh_outlet,rekeningId:null,jumlah:hppAmt,
+        lines:[{accountId:"5000",debit:hppAmt,credit:0},{accountId:"1300",debit:0,credit:hppAmt}]});
+    }
+  }
+  save();
+  draftDetails = []; kh_useMenu=false;
+  msg.innerHTML = `<div class="msg ok">Transaksi berhasil dicatat.</div>`;
+  render();
+}
+function deleteEntry(id){ data.entries = data.entries.filter(e=>e.id!==id); save(); render(); }
+
+/* ===== REKAP ===== */
+let rekap_periode="harian", rekap_outlet="semua";
+function renderRekap(main){
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Rekap Transaksi</h2>`;
+  const row = document.createElement("div"); row.className="row";
+  row.innerHTML = `
+    <div><label>Periode</label><select onchange="rekap_periode=this.value; render();">
+      <option value="harian" ${rekap_periode==="harian"?"selected":""}>Per Hari</option>
+      <option value="bulanan" ${rekap_periode==="bulanan"?"selected":""}>Per Bulan</option>
+      <option value="tahunan" ${rekap_periode==="tahunan"?"selected":""}>Per Tahun</option>
+    </select></div>
+    <div><label>Outlet</label><select onchange="rekap_outlet=this.value; render();">
+      <option value="semua" ${rekap_outlet==="semua"?"selected":""}>Semua Outlet</option>
+      ${data.outlets.map(o=>`<option value="${o.id}" ${rekap_outlet===o.id?"selected":""}>${o.name}</option>`).join("")}
+    </select></div>`;
+  card.appendChild(row);
+
+  const filtered = data.entries.filter(e=>e.arus && (rekap_outlet==="semua"||e.outletId===rekap_outlet));
+  const keyFn = e => rekap_periode==="harian" ? e.date : rekap_periode==="bulanan" ? e.date.slice(0,7) : e.date.slice(0,4);
+  const grouped = {};
+  filtered.forEach(e=>{
+    const k = keyFn(e);
+    if(!grouped[k]) grouped[k]={masuk:0,keluar:0};
+    grouped[k][e.arus] += e.jumlah;
+  });
+  const keys = Object.keys(grouped).sort().reverse();
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = keys.length ? `<table><thead><tr><th>Periode</th><th class="num">Masuk</th><th class="num">Keluar</th><th class="num">Net</th></tr></thead><tbody>
+    ${keys.map(k=>{const g=grouped[k];return `<tr><td>${k}</td><td class="num">Rp ${fmt(g.masuk)}</td><td class="num">Rp ${fmt(g.keluar)}</td><td class="num" style="color:${g.masuk-g.keluar>=0?'var(--good)':'var(--bad)'}">Rp ${fmt(g.masuk-g.keluar)}</td></tr>`}).join("")}
+  </tbody></table>` : `<p><small class="hint">Belum ada data untuk filter ini.</small></p>`;
+  card.appendChild(wrap);
+  main.appendChild(card);
+
+  const jcard = document.createElement("div"); jcard.className="card";
+  jcard.innerHTML = `<h2>Rekap per Jenis Transaksi</h2>`;
+  const byJenis = {};
+  filtered.forEach(e=>{ if(!byJenis[e.jenisT]) byJenis[e.jenisT]={masuk:0,keluar:0}; byJenis[e.jenisT][e.arus]+=e.jumlah; });
+  const jw = document.createElement("div"); jw.className="tablewrap";
+  const jkeys = Object.keys(byJenis);
+  jw.innerHTML = jkeys.length ? `<table><thead><tr><th>Jenis Transaksi</th><th class="num">Masuk</th><th class="num">Keluar</th></tr></thead><tbody>
+    ${jkeys.map(k=>`<tr><td>${k}</td><td class="num">Rp ${fmt(byJenis[k].masuk)}</td><td class="num">Rp ${fmt(byJenis[k].keluar)}</td></tr>`).join("")}
+  </tbody></table>` : `<p><small class="hint">-</small></p>`;
+  jcard.appendChild(jw);
+  main.appendChild(jcard);
+}
+
+/* ===== HUTANG ===== */
+let hutangPayId = null;
+function renderHutang(main){
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Tambah Hutang (Utang ke Supplier)</h2>`;
+  const r1=document.createElement("div"); r1.className="row";
+  r1.innerHTML = `
+    <div><label>Tanggal</label><input type="date" id="h-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>Outlet</label><select id="h-outlet">${data.outlets.map(o=>`<option value="${o.id}">${o.name}</option>`).join("")}</select></div>
+    <div><label>Kreditur / Supplier</label><input id="h-kreditur" placeholder="cth. Supplier Sayur Pak Budi"></div>`;
+  card.appendChild(r1);
+  const r2=document.createElement("div"); r2.className="row";
+  r2.innerHTML = `
+    <div><label>Jumlah (Rp)</label><input type="number" min="0" id="h-jumlah" placeholder="0"></div>
+    <div><label>Jatuh Tempo</label><input type="date" id="h-tempo"></div>
+    <div><label>Untuk Akun Beban</label><select id="h-akun">${data.accounts.filter(a=>a.type==="Beban"||a.code==="1300").map(a=>`<option value="${a.id}">${a.name}</option>`).join("")}</select></div>`;
+  card.appendChild(r2);
+  const r3=document.createElement("div"); r3.className="row";
+  r3.innerHTML = `<div style="flex:2"><label>Catatan</label><input id="h-catatan" placeholder="opsional"></div>`;
+  card.appendChild(r3);
+  const msg = document.createElement("div"); msg.id="h-msg"; card.appendChild(msg);
+  const btn = document.createElement("button"); btn.className="btn"; btn.textContent="Simpan Hutang";
+  btn.onclick = ()=>{
+    const date=document.getElementById("h-date").value, outletId=document.getElementById("h-outlet").value;
+    const kreditur=document.getElementById("h-kreditur").value.trim(), jumlah=parseFloat(document.getElementById("h-jumlah").value);
+    const tempo=document.getElementById("h-tempo").value, akun=document.getElementById("h-akun").value, catatan=document.getElementById("h-catatan").value.trim();
+    if(!kreditur||!jumlah||jumlah<=0){ msg.innerHTML=`<div class="msg err">Kreditur dan jumlah wajib diisi.</div>`; return; }
+    const entry = addEntry({date,desc:`Hutang - ${kreditur}`,arus:null,jenisT:"Pembelian Bahan Baku",outletId,rekeningId:null,jumlah,
+      lines:[{accountId:akun,debit:jumlah,credit:0},{accountId:"2000",debit:0,credit:jumlah}]});
+    data.hutangs.push({id:uid("h"),outletId,kreditur,tanggal:date,jumlah,jatuhTempo:tempo,catatan,entryId:entry.id,payments:[]});
+    save(); msg.innerHTML=`<div class="msg ok">Hutang tersimpan.</div>`; render();
+  };
+  card.appendChild(btn);
+  main.appendChild(card);
+
+  const list = document.createElement("div"); list.className="card";
+  list.innerHTML = `<h2>Daftar Hutang</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  const rows = [...data.hutangs].sort((a,b)=>a.tanggal<b.tanggal?1:-1);
+  wrap.innerHTML = rows.length ? `<table><thead><tr><th>Tgl</th><th>Outlet</th><th>Kreditur</th><th class="num">Jumlah</th><th class="num">Dibayar</th><th class="num">Sisa</th><th>Jatuh Tempo</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(h=>{
+      const dibayar = h.payments.reduce((s,p)=>s+p.jumlah,0);
+      const sisa = h.jumlah-dibayar;
+      const lunas = sisa<=0.01;
+      return `<tr><td>${h.tanggal}</td><td>${outletName(h.outletId)}</td><td>${h.kreditur}</td><td class="num">Rp ${fmt(h.jumlah)}</td>
+        <td class="num">Rp ${fmt(dibayar)}</td><td class="num">Rp ${fmt(sisa)}</td><td>${h.jatuhTempo||'-'}</td>
+        <td><span class="pill" style="color:${lunas?'var(--good)':'var(--bad)'}">${lunas?'Lunas':'Belum Lunas'}</span></td>
+        <td>${lunas?'':`<button class="btn small" onclick="hutangPayId='${h.id}'; render();">Bayar</button>`}</td></tr>
+        ${hutangPayId===h.id?`<tr><td colspan="9"><div class="inlineform">
+          <div class="row">
+            <div><label>Tanggal Bayar</label><input type="date" id="hp-date-${h.id}" value="${new Date().toISOString().slice(0,10)}"></div>
+            <div><label>Jumlah Bayar</label><input type="number" id="hp-amt-${h.id}" value="${fmt(sisa)}" max="${sisa}"></div>
+            <div><label>Rekening</label><select id="hp-rek-${h.id}">${rekeningList().map(r=>`<option value="${r.id}">${r.name}</option>`).join("")}</select></div>
+          </div>
+          <button class="btn small" onclick="bayarHutang('${h.id}')">Konfirmasi Bayar</button>
+          <button class="btn secondary small" onclick="hutangPayId=null; render();">Batal</button>
+        </div></td></tr>`:''}`;
+    }).join("")}
+  </tbody></table>` : `<p><small class="hint">Belum ada hutang tercatat.</small></p>`;
+  list.appendChild(wrap);
+  main.appendChild(list);
+}
+function bayarHutang(hid){
+  const h = data.hutangs.find(x=>x.id===hid);
+  const date = document.getElementById("hp-date-"+hid).value;
+  const jumlah = parseFloat(document.getElementById("hp-amt-"+hid).value);
+  const rekeningId = document.getElementById("hp-rek-"+hid).value;
+  const dibayar = h.payments.reduce((s,p)=>s+p.jumlah,0);
+  const sisa = h.jumlah-dibayar;
+  if(!jumlah || jumlah<=0 || jumlah>sisa+0.01){ alert("Jumlah bayar tidak valid."); return; }
+  const entry = addEntry({date,desc:`Bayar hutang - ${h.kreditur}`,arus:"keluar",jenisT:"Pelunasan Hutang",outletId:h.outletId,rekeningId,jumlah,
+    lines:[{accountId:"2000",debit:jumlah,credit:0},{accountId:rekeningId,debit:0,credit:jumlah}]});
+  h.payments.push({date,jumlah,rekeningId,entryId:entry.id});
+  save(); hutangPayId=null; render();
+}
+
+/* ===== TRANSFER SALDO ===== */
+function renderTransfer(main){
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Pemindahan Saldo Antar Rekening</h2><p><small class="hint">cth. Setor kas kasir outlet ke kas pusat, atau tunai ke bank.</small></p>`;
+  const r1 = document.createElement("div"); r1.className="row";
+  r1.innerHTML = `
+    <div><label>Tanggal</label><input type="date" id="tf-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>Dari Rekening</label><select id="tf-from">${rekeningList().map(r=>`<option value="${r.id}">${r.name} (${r.kasType})</option>`).join("")}</select></div>
+    <div><label>Ke Rekening</label><select id="tf-to">${rekeningList().map(r=>`<option value="${r.id}">${r.name} (${r.kasType})</option>`).join("")}</select></div>`;
+  card.appendChild(r1);
+  const r2 = document.createElement("div"); r2.className="row";
+  r2.innerHTML = `<div><label>Jumlah (Rp)</label><input type="number" min="0" id="tf-amt"></div>
+    <div style="flex:2"><label>Keterangan</label><input id="tf-desc" placeholder="cth. Setor kasir ke pusat"></div>`;
+  card.appendChild(r2);
+  const msg = document.createElement("div"); msg.id="tf-msg"; card.appendChild(msg);
+  const btn = document.createElement("button"); btn.className="btn"; btn.textContent="Pindahkan Saldo";
+  btn.onclick = ()=>{
+    const date=document.getElementById("tf-date").value, from=document.getElementById("tf-from").value, to=document.getElementById("tf-to").value;
+    const amt=parseFloat(document.getElementById("tf-amt").value), desc=document.getElementById("tf-desc").value.trim()||"Pemindahan saldo";
+    if(from===to){ msg.innerHTML=`<div class="msg err">Rekening asal dan tujuan tidak boleh sama.</div>`; return; }
+    if(!amt||amt<=0){ msg.innerHTML=`<div class="msg err">Jumlah harus lebih dari 0.</div>`; return; }
+    addEntry({date,desc,arus:null,jenisT:"Transfer Saldo",outletId:null,rekeningId:null,jumlah:amt,
+      lines:[{accountId:to,debit:amt,credit:0},{accountId:from,debit:0,credit:amt}]});
+    save(); msg.innerHTML=`<div class="msg ok">Saldo berhasil dipindahkan.</div>`; render();
+  };
+  card.appendChild(btn);
+  main.appendChild(card);
+
+  const list = document.createElement("div"); list.className="card";
+  list.innerHTML = `<h2>Riwayat Pemindahan Saldo</h2>`;
+  const rows = data.entries.filter(e=>e.jenisT==="Transfer Saldo").sort((a,b)=>a.date<b.date?1:-1);
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = rows.length ? `<table><thead><tr><th>Tgl</th><th>Dari</th><th>Ke</th><th>Keterangan</th><th class="num">Jumlah</th><th></th></tr></thead><tbody>
+    ${rows.map(e=>{const from=e.lines.find(l=>l.credit>0),to=e.lines.find(l=>l.debit>0);
+      return `<tr><td>${e.date}</td><td>${acc(from.accountId)?acc(from.accountId).name:'-'}</td><td>${acc(to.accountId)?acc(to.accountId).name:'-'}</td><td>${e.desc}</td><td class="num">Rp ${fmt(e.jumlah)}</td><td><button class="btn danger" onclick="deleteEntry('${e.id}')">Hapus</button></td></tr>`}).join("")}
+  </tbody></table>` : `<p><small class="hint">Belum ada pemindahan saldo.</small></p>`;
+  list.appendChild(wrap);
+  main.appendChild(list);
+}
+
+/* ===== REKENING & OUTLET ===== */
+function renderRekening(main){
+  const oCard = document.createElement("div"); oCard.className="card";
+  oCard.innerHTML = `<h2>Outlet</h2>`;
+  const orow = document.createElement("div"); orow.className="row";
+  orow.innerHTML = `<div><label>Nama Outlet Baru</label><input id="o-name" placeholder="cth. Outlet Cabang 2"></div>`;
+  oCard.appendChild(orow);
+  const obtn = document.createElement("button"); obtn.className="btn"; obtn.textContent="+ Tambah Outlet";
+  obtn.onclick = ()=>{
+    const name = document.getElementById("o-name").value.trim();
+    if(!name){ alert("Nama outlet wajib diisi."); return; }
+    data.outlets.push({id:uid("o"),name}); save(); render();
+  };
+  oCard.appendChild(obtn);
+  const owrap = document.createElement("div"); owrap.className="tablewrap"; owrap.style.marginTop="10px";
+  owrap.innerHTML = `<table><thead><tr><th>Outlet</th><th></th></tr></thead><tbody>
+    ${data.outlets.map(o=>`<tr><td>${o.name}</td><td><button class="btn danger" onclick="deleteOutlet('${o.id}')">Hapus</button></td></tr>`).join("")}
+  </tbody></table>`;
+  oCard.appendChild(owrap);
+  main.appendChild(oCard);
+
+  const rCard = document.createElement("div"); rCard.className="card";
+  rCard.innerHTML = `<h2>Rekening Kas / Bank</h2>`;
+  const rrow = document.createElement("div"); rrow.className="row";
+  rrow.innerHTML = `
+    <div><label>Kode</label><input id="r-code" placeholder="cth. 1020"></div>
+    <div><label>Nama Rekening</label><input id="r-name" placeholder="cth. Kas Kasir 2"></div>
+    <div><label>Jenis</label><select id="r-jenis"><option>Tunai</option><option>Kasir</option><option>Pusat</option><option>Bank</option></select></div>
+    <div><label>Outlet</label><select id="r-outlet"><option value="">- (Pusat) -</option>${data.outlets.map(o=>`<option value="${o.id}">${o.name}</option>`).join("")}</select></div>`;
+  rCard.appendChild(rrow);
+  const rbtn = document.createElement("button"); rbtn.className="btn"; rbtn.textContent="+ Tambah Rekening";
+  rbtn.onclick = ()=>{
+    const code=document.getElementById("r-code").value.trim(), name=document.getElementById("r-name").value.trim();
+    const kasType=document.getElementById("r-jenis").value, outletId=document.getElementById("r-outlet").value||null;
+    if(!code||!name){ alert("Kode dan nama wajib diisi."); return; }
+    if(data.accounts.some(a=>a.code===code)){ alert("Kode sudah dipakai."); return; }
+    data.accounts.push({id:code,code,name,type:"Aset",isKas:true,kasType,outletId});
+    save(); render();
+  };
+  rCard.appendChild(rbtn);
+  const bal = accountBalances();
+  const rwrap = document.createElement("div"); rwrap.className="tablewrap"; rwrap.style.marginTop="10px";
+  rwrap.innerHTML = `<table><thead><tr><th>Kode</th><th>Nama</th><th>Jenis</th><th>Outlet</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
+    ${rekeningList().map(r=>{const b=bal[r.id]||{debit:0,credit:0};return `<tr><td>${r.code}</td><td>${r.name}</td><td><span class="pill">${r.kasType}</span></td><td>${r.outletId?outletName(r.outletId):'Pusat'}</td><td class="num">Rp ${fmt(b.debit-b.credit)}</td><td><button class="btn danger" onclick="deleteAccount('${r.id}')">Hapus</button></td></tr>`}).join("")}
+  </tbody></table>`;
+  rCard.appendChild(rwrap);
+  main.appendChild(rCard);
+}
+function deleteOutlet(id){
+  if(data.entries.some(e=>e.outletId===id) || data.accounts.some(a=>a.outletId===id)){ alert("Outlet masih dipakai di transaksi/rekening."); return; }
+  data.outlets = data.outlets.filter(o=>o.id!==id); save(); render();
+}
+
+/* ===== MENU & HPP ===== */
+function renderMenu(main){
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Menu & HPP</h2>`;
+  const row = document.createElement("div"); row.className="row";
+  row.innerHTML = `
+    <div style="flex:2"><label>Nama Menu</label><input id="mn-name" placeholder="cth. Ayam Bakar"></div>
+    <div><label>Harga Jual (Rp)</label><input type="number" min="0" id="mn-harga"></div>
+    <div><label>HPP / Modal (Rp)</label><input type="number" min="0" id="mn-hpp"></div>`;
+  card.appendChild(row);
+  const btn = document.createElement("button"); btn.className="btn"; btn.textContent="+ Tambah Menu";
+  btn.onclick = ()=>{
+    const name=document.getElementById("mn-name").value.trim(), harga=parseFloat(document.getElementById("mn-harga").value);
+    const hpp=parseFloat(document.getElementById("mn-hpp").value);
+    if(!name||!harga){ alert("Nama dan harga jual wajib diisi."); return; }
+    data.menus.push({id:uid("m"),name,hargaJual:harga,hpp:hpp||0}); save(); render();
+  };
+  card.appendChild(btn);
+  main.appendChild(card);
+
+  const list = document.createElement("div"); list.className="card";
+  list.innerHTML = `<h2>Daftar Menu</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = `<table><thead><tr><th>Menu</th><th class="num">Harga Jual</th><th class="num">HPP</th><th class="num">Margin</th><th class="num">%Margin</th><th></th></tr></thead><tbody>
+    ${data.menus.map(m=>{const margin=m.hargaJual-m.hpp, pct=m.hargaJual?((margin/m.hargaJual)*100).toFixed(0):0;
+      return `<tr><td>${m.name}</td><td class="num">Rp ${fmt(m.hargaJual)}</td><td class="num">Rp ${fmt(m.hpp)}</td><td class="num">Rp ${fmt(margin)}</td><td class="num">${pct}%</td><td><button class="btn danger" onclick="deleteMenu('${m.id}')">Hapus</button></td></tr>`}).join("")}
+  </tbody></table>`;
+  list.appendChild(wrap);
+  main.appendChild(list);
+}
+function deleteMenu(id){ data.menus = data.menus.filter(m=>m.id!==id); save(); render(); }
+
+/* ===== DASHBOARD ===== */
+function renderDashboard(main){
+  const pendapatan = netByType("Pendapatan"), beban = netByType("Beban"), laba = pendapatan-beban;
+  const aset = netByType("Aset"), liab = netByType("Liabilitas");
+  const kpi = document.createElement("div"); kpi.className="kpi";
+  kpi.innerHTML = `
+    <div class="box"><div class="l">Total Pendapatan</div><div class="v">Rp ${fmt(pendapatan)}</div></div>
+    <div class="box"><div class="l">Total Beban</div><div class="v">Rp ${fmt(beban)}</div></div>
+    <div class="box"><div class="l">Laba / Rugi Bersih</div><div class="v" style="color:${laba>=0?'var(--good)':'var(--bad)'}">Rp ${fmt(laba)}</div></div>
+    <div class="box"><div class="l">Total Aset</div><div class="v">Rp ${fmt(aset)}</div></div>
+    <div class="box"><div class="l">Total Liabilitas</div><div class="v">Rp ${fmt(liab)}</div></div>
+    <div class="box"><div class="l">Hutang Belum Lunas</div><div class="v">${data.hutangs.filter(h=>h.jumlah-h.payments.reduce((s,p)=>s+p.jumlah,0)>0.01).length}</div></div>`;
+  main.appendChild(kpi);
+  const tip = document.createElement("div"); tip.className="card";
+  tip.innerHTML = `<h2>Alur Kerja</h2><p style="font-size:.85rem;color:var(--sub);margin:0">
+    Catat transaksi harian di tab Kas Harian (dengan outlet, rekening & kategori) → pantau Rekap per periode →
+    kelola Hutang dan Pemindahan Saldo antar rekening → semua otomatis terhubung ke Buku Besar, Neraca Saldo, Laba Rugi, dan Neraca.</p>`;
+  main.appendChild(tip);
+}
+
+/* ===== AKUN COA ===== */
+function renderAccounts(main){
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h2>Bagan Akun (Chart of Accounts)</h2>`;
+  const form = document.createElement("div"); form.className="row";
+  form.innerHTML = `
+    <div><label>Kode</label><input id="a-code" placeholder="cth. 1600"></div>
+    <div style="flex:2"><label>Nama Akun</label><input id="a-name" placeholder="cth. Kendaraan"></div>
+    <div><label>Jenis</label><select id="a-type">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select></div>`;
+  card.appendChild(form);
+  const addBtn = document.createElement("button"); addBtn.className="btn"; addBtn.textContent="+ Tambah Akun";
+  addBtn.onclick = ()=>{
+    const code=document.getElementById("a-code").value.trim(), name=document.getElementById("a-name").value.trim(), type=document.getElementById("a-type").value;
+    if(!code||!name){ alert("Kode dan nama akun wajib diisi."); return; }
+    if(data.accounts.some(a=>a.code===code)){ alert("Kode akun sudah dipakai."); return; }
+    data.accounts.push({id:code,code,name,type}); save(); render();
+  };
+  card.appendChild(addBtn);
+  main.appendChild(card);
+
+  const bal = accountBalances();
+  const listCard = document.createElement("div"); listCard.className="card"; listCard.innerHTML=`<h2>Daftar Akun</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = `<table><thead><tr><th>Kode</th><th>Nama Akun</th><th>Jenis</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
+    ${data.accounts.map(a=>{const b=bal[a.id]||{debit:0,credit:0}; const saldo=DEBIT_NORMAL(a.type)?b.debit-b.credit:b.credit-b.debit;
+      return `<tr><td>${a.code}</td><td>${a.name}${a.isKas?' <span class="pill">Rekening</span>':''}</td><td><span class="pill">${a.type}</span></td><td class="num">Rp ${fmt(saldo)}</td><td><button class="btn danger" onclick="deleteAccount('${a.id}')">Hapus</button></td></tr>`}).join("")}
+  </tbody></table>`;
+  listCard.appendChild(wrap); main.appendChild(listCard);
+}
+function deleteAccount(id){
+  if(data.entries.some(e=>e.lines.some(l=>l.accountId===id))){ alert("Akun tidak bisa dihapus karena sudah dipakai di jurnal."); return; }
+  data.accounts = data.accounts.filter(a=>a.id!==id); save(); render();
+}
+
+/* ===== JURNAL UMUM ===== */
+let draftLines = [{accountId:"",debit:"",credit:""},{accountId:"",debit:"",credit:""}];
+function renderJournal(main){
+  const card = document.createElement("div"); card.className="card"; card.innerHTML=`<h2>Input Jurnal Umum (Manual)</h2>`;
+  const row = document.createElement("div"); row.className="row";
+  row.innerHTML = `
+    <div><label>Tanggal</label><input type="date" id="j-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div style="flex:2"><label>Keterangan Transaksi</label><input id="j-desc" placeholder="cth. Penyusutan peralatan"></div>`;
+  card.appendChild(row);
+  const linesbox = document.createElement("div"); linesbox.className="linesbox"; linesbox.id="lines-box"; card.appendChild(linesbox);
+  const addLineBtn = document.createElement("button"); addLineBtn.className="btn secondary"; addLineBtn.textContent="+ Baris";
+  addLineBtn.onclick = ()=>{ draftLines.push({accountId:"",debit:"",credit:""}); renderLines(); };
+  card.appendChild(addLineBtn);
+  const msgDiv = document.createElement("div"); msgDiv.id="j-msg"; msgDiv.style.marginTop="10px"; card.appendChild(msgDiv);
+  const saveBtn = document.createElement("button"); saveBtn.className="btn"; saveBtn.textContent="Simpan Jurnal"; saveBtn.style.marginTop="8px";
+  saveBtn.onclick = submitJournal; card.appendChild(saveBtn);
+  main.appendChild(card); renderLines();
+
+  const histCard = document.createElement("div"); histCard.className="card"; histCard.innerHTML=`<h2>Riwayat Jurnal</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  const sorted = [...data.entries].sort((a,b)=>a.date<b.date?1:-1);
+  wrap.innerHTML = sorted.length ? sorted.map(e=>`
+    <table style="margin-bottom:12px"><thead><tr><th colspan="3">${e.date} — ${e.desc} <button class="btn danger" style="float:right" onclick="deleteEntry('${e.id}')">Hapus</button></th></tr>
+    <tr><th>Akun</th><th class="num">Debit</th><th class="num">Kredit</th></tr></thead><tbody>
+    ${e.lines.map(l=>`<tr><td>${acc(l.accountId)?acc(l.accountId).code+' - '+acc(l.accountId).name:'(dihapus)'}</td><td class="num">${l.debit?'Rp '+fmt(l.debit):''}</td><td class="num">${l.credit?'Rp '+fmt(l.credit):''}</td></tr>`).join("")}
+    </tbody></table>`).join("") : `<p><small class="hint">Belum ada jurnal tersimpan.</small></p>`;
+  histCard.appendChild(wrap); main.appendChild(histCard);
+}
+function renderLines(){
+  const box = document.getElementById("lines-box"); if(!box) return; box.innerHTML="";
+  draftLines.forEach((l,i)=>{
+    const div = document.createElement("div"); div.className="lineitem";
+    div.innerHTML = `
+      <div><label>Akun</label><select onchange="draftLines[${i}].accountId=this.value"><option value="">-- pilih --</option>
+        ${data.accounts.map(a=>`<option value="${a.id}" ${l.accountId===a.id?'selected':''}>${a.code} - ${a.name}</option>`).join("")}</select></div>
+      <div><label>Debit</label><input type="number" min="0" value="${l.debit}" oninput="draftLines[${i}].debit=this.value?parseFloat(this.value):''"></div>
+      <div><label>Kredit</label><input type="number" min="0" value="${l.credit}" oninput="draftLines[${i}].credit=this.value?parseFloat(this.value):''"></div>
+      <div><button class="btn danger" onclick="removeLine(${i})">✕</button></div>`;
+    box.appendChild(div);
+  });
+}
+function removeLine(i){ draftLines.splice(i,1); if(draftLines.length<2){draftLines.push({accountId:"",debit:"",credit:""})} renderLines(); }
+function submitJournal(){
+  const date=document.getElementById("j-date").value, desc=document.getElementById("j-desc").value.trim();
+  const msg=document.getElementById("j-msg");
+  const lines = draftLines.filter(l=>l.accountId && ((l.debit||0)>0 || (l.credit||0)>0));
+  const totalD = lines.reduce((s,l)=>s+(parseFloat(l.debit)||0),0), totalC = lines.reduce((s,l)=>s+(parseFloat(l.credit)||0),0);
+  if(!date||!desc){ msg.innerHTML=`<div class="msg err">Tanggal dan keterangan wajib diisi.</div>`; return; }
+  if(lines.length<2){ msg.innerHTML=`<div class="msg err">Minimal 2 baris akun diperlukan.</div>`; return; }
+  if(Math.abs(totalD-totalC)>0.001){ msg.innerHTML=`<div class="msg err">Tidak balance! Debit Rp ${fmt(totalD)} ≠ Kredit Rp ${fmt(totalC)}.</div>`; return; }
+  addEntry({date,desc,arus:null,jenisT:"Lain-lain",outletId:null,rekeningId:null,jumlah:totalD,lines:lines.map(l=>({accountId:l.accountId,debit:parseFloat(l.debit)||0,credit:parseFloat(l.credit)||0}))});
+  save(); draftLines=[{accountId:"",debit:"",credit:""},{accountId:"",debit:"",credit:""}];
+  msg.innerHTML=`<div class="msg ok">Jurnal berhasil disimpan.</div>`; render();
+}
+
+/* ===== BUKU BESAR ===== */
+function renderLedger(main){
+  const card = document.createElement("div"); card.className="card"; card.innerHTML=`<h2>Buku Besar per Akun</h2>`;
+  const sel = document.createElement("select");
+  sel.innerHTML = data.accounts.map(a=>`<option value="${a.id}">${a.code} - ${a.name}</option>`).join("");
+  sel.onchange = ()=> drawLedger(sel.value);
+  card.appendChild(sel);
+  const out = document.createElement("div"); out.id="ledger-out"; out.style.marginTop="12px"; card.appendChild(out);
+  main.appendChild(card);
+  if(data.accounts.length) drawLedger(data.accounts[0].id);
+  function drawLedger(accId){
+    const a = acc(accId); const out = document.getElementById("ledger-out"); const normal = DEBIT_NORMAL(a.type);
+    let running=0; const rows=[];
+    [...data.entries].sort((x,y)=>x.date<y.date?-1:1).forEach(e=>{
+      e.lines.filter(l=>l.accountId===accId).forEach(l=>{ running += normal?(l.debit-l.credit):(l.credit-l.debit); rows.push({date:e.date,desc:e.desc,debit:l.debit,credit:l.credit,running}); });
+    });
+    out.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Tanggal</th><th>Keterangan</th><th class="num">Debit</th><th class="num">Kredit</th><th class="num">Saldo</th></tr></thead>
+    <tbody>${rows.length?rows.map(r=>`<tr><td>${r.date}</td><td>${r.desc}</td><td class="num">${r.debit?fmt(r.debit):''}</td><td class="num">${r.credit?fmt(r.credit):''}</td><td class="num">Rp ${fmt(r.running)}</td></tr>`).join(""):`<tr><td colspan="5"><small class="hint">Belum ada mutasi.</small></td></tr>`}</tbody></table></div>`;
+  }
+}
+
+/* ===== NERACA SALDO ===== */
+function renderTrial(main){
+  const card = document.createElement("div"); card.className="card"; card.innerHTML=`<h2>Neraca Saldo (Trial Balance)</h2>`;
+  const bal = accountBalances(); let totalD=0,totalC=0;
+  const rows = data.accounts.map(a=>{const b=bal[a.id]||{debit:0,credit:0};const net=b.debit-b.credit;const d=net>0?net:0,c=net<0?-net:0;totalD+=d;totalC+=c;return {a,d,c};}).filter(r=>r.d!==0||r.c!==0);
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = `<table><thead><tr><th>Kode</th><th>Akun</th><th class="num">Debit</th><th class="num">Kredit</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${r.a.code}</td><td>${r.a.name}</td><td class="num">${r.d?'Rp '+fmt(r.d):''}</td><td class="num">${r.c?'Rp '+fmt(r.c):''}</td></tr>`).join("")}
+    <tr class="section-total"><td colspan="2">Total</td><td class="num">Rp ${fmt(totalD)}</td><td class="num">Rp ${fmt(totalC)}</td></tr></tbody></table>`;
+  card.appendChild(wrap);
+  const status = document.createElement("div"); status.className="msg "+(Math.abs(totalD-totalC)<0.01?"ok":"err"); status.style.marginTop="10px";
+  status.textContent = Math.abs(totalD-totalC)<0.01 ? "Neraca saldo balance ✓" : "Neraca saldo TIDAK balance — periksa jurnal.";
+  card.appendChild(status); main.appendChild(card);
+}
+
+/* ===== LABA RUGI ===== */
+function renderIncome(main){
+  const bal = accountBalances();
+  const pend = data.accounts.filter(a=>a.type==="Pendapatan").map(a=>{const b=bal[a.id]||{debit:0,credit:0};return {a,v:b.credit-b.debit};});
+  const beb = data.accounts.filter(a=>a.type==="Beban").map(a=>{const b=bal[a.id]||{debit:0,credit:0};return {a,v:b.debit-b.credit};});
+  const totalP = pend.reduce((s,r)=>s+r.v,0), totalB = beb.reduce((s,r)=>s+r.v,0), laba = totalP-totalB;
+  const card = document.createElement("div"); card.className="card"; card.innerHTML=`<h2>Laporan Laba Rugi</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = `<table><thead><tr><th>Akun</th><th class="num">Jumlah</th></tr></thead><tbody>
+    <tr><td colspan="2"><b>Pendapatan</b></td></tr>
+    ${pend.map(r=>`<tr><td>${r.a.name}</td><td class="num">Rp ${fmt(r.v)}</td></tr>`).join("")}
+    <tr class="section-total"><td>Total Pendapatan</td><td class="num">Rp ${fmt(totalP)}</td></tr>
+    <tr><td colspan="2"><b>Beban</b></td></tr>
+    ${beb.map(r=>`<tr><td>${r.a.name}</td><td class="num">Rp ${fmt(r.v)}</td></tr>`).join("")}
+    <tr class="section-total"><td>Total Beban</td><td class="num">Rp ${fmt(totalB)}</td></tr>
+    <tr class="section-total"><td>Laba / Rugi Bersih</td><td class="num" style="color:${laba>=0?'var(--good)':'var(--bad)'}">Rp ${fmt(laba)}</td></tr>
+  </tbody></table>`;
+  card.appendChild(wrap); main.appendChild(card);
+}
+
+/* ===== NERACA ===== */
+function renderBalance(main){
+  const bal = accountBalances();
+  const aset = data.accounts.filter(a=>a.type==="Aset").map(a=>{const b=bal[a.id]||{debit:0,credit:0};return{a,v:b.debit-b.credit};});
+  const liab = data.accounts.filter(a=>a.type==="Liabilitas").map(a=>{const b=bal[a.id]||{debit:0,credit:0};return{a,v:b.credit-b.debit};});
+  const ekui = data.accounts.filter(a=>a.type==="Ekuitas").map(a=>{const b=bal[a.id]||{debit:0,credit:0};return{a,v:b.credit-b.debit};});
+  const labaBerjalan = netByType("Pendapatan")-netByType("Beban");
+  const totalAset = aset.reduce((s,r)=>s+r.v,0), totalLiab = liab.reduce((s,r)=>s+r.v,0), totalEkuitas = ekui.reduce((s,r)=>s+r.v,0)+labaBerjalan;
+  const card = document.createElement("div"); card.className="card"; card.innerHTML=`<h2>Neraca (Balance Sheet)</h2>`;
+  const wrap = document.createElement("div"); wrap.className="tablewrap";
+  wrap.innerHTML = `<table><thead><tr><th>Akun</th><th class="num">Jumlah</th></tr></thead><tbody>
+    <tr><td colspan="2"><b>Aset</b></td></tr>
+    ${aset.map(r=>`<tr><td>${r.a.name}</td><td class="num">Rp ${fmt(r.v)}</td></tr>`).join("")}
+    <tr class="section-total"><td>Total Aset</td><td class="num">Rp ${fmt(totalAset)}</td></tr>
+    <tr><td colspan="2"><b>Liabilitas</b></td></tr>
+    ${liab.map(r=>`<tr><td>${r.a.name}</td><td class="num">Rp ${fmt(r.v)}</td></tr>`).join("")}
+    <tr class="section-total"><td>Total Liabilitas</td><td class="num">Rp ${fmt(totalLiab)}</td></tr>
+    <tr><td colspan="2"><b>Ekuitas</b></td></tr>
+    ${ekui.map(r=>`<tr><td>${r.a.name}</td><td class="num">Rp ${fmt(r.v)}</td></tr>`).join("")}
+    <tr><td>Laba (Rugi) Tahun Berjalan</td><td class="num">Rp ${fmt(labaBerjalan)}</td></tr>
+    <tr class="section-total"><td>Total Ekuitas</td><td class="num">Rp ${fmt(totalEkuitas)}</td></tr>
+    <tr class="section-total"><td>Total Liabilitas + Ekuitas</td><td class="num">Rp ${fmt(totalLiab+totalEkuitas)}</td></tr>
+  </tbody></table>`;
+  card.appendChild(wrap);
+  const diff = Math.abs(totalAset-(totalLiab+totalEkuitas));
+  const status = document.createElement("div"); status.className="msg "+(diff<0.01?"ok":"err"); status.style.marginTop="10px";
+  status.textContent = diff<0.01 ? "Neraca seimbang: Aset = Liabilitas + Ekuitas ✓" : "Neraca TIDAK seimbang — periksa jurnal.";
+  card.appendChild(status); main.appendChild(card);
+}
+
+render();
+</script>
+</body>
+</html>
